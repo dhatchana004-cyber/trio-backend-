@@ -16,6 +16,7 @@ import orgRoutes from './routes/org.routes';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 
 // Middleware

@@ -119,7 +119,8 @@ export const uploadProfilePhoto = async (req: AuthRequest, res: Response) => {
     if (!profile_photo_url) {
       // Local storage: build URL from file path
       const filename = (req.file as any).filename;
-      profile_photo_url = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      profile_photo_url = `${proto}://${req.get('host')}/uploads/${filename}`;
     }
 
     const user = await prisma.user.update({

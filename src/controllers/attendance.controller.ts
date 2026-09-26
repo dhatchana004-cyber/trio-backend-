@@ -3,7 +3,7 @@ import prisma from "../utils/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { AuthRequest } from "../middlewares/auth";
 import path from "path";
-import { compareFacesLocal } from "../utils/faceMatcher";
+import { compareFacesAWS } from "../utils/faceMatcher";
 
 export const clockIn = async (req: AuthRequest, res: Response) => {
   try {
@@ -27,7 +27,8 @@ export const clockIn = async (req: AuthRequest, res: Response) => {
 
     if (req.file) {
       selfieFilename = (req.file as any).filename;
-      selfie_url = `${req.protocol}://${req.get("host")}/uploads/${selfieFilename}`;
+      const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      selfie_url = `${proto}://${req.get("host")}/uploads/${selfieFilename}`;
     }
 
     if (!selfie_url || !selfieFilename) {
@@ -48,7 +49,7 @@ export const clockIn = async (req: AuthRequest, res: Response) => {
       const selfiePhotoPath = path.join(uploadsDir, selfieFilename);
       
       try {
-        const isMatch = await compareFacesLocal(profilePhotoPath, selfiePhotoPath);
+        const isMatch = await compareFacesAWS(profilePhotoPath, selfiePhotoPath);
         if (!isMatch) {
           return res.status(400).json(errorResponse("Face verification failed. Faces do not match."));
         }
@@ -121,7 +122,7 @@ export const clockOut = async (req: AuthRequest, res: Response) => {
       const selfiePhotoPath = require('path').join(uploadsDir, selfieFilename);
       
       try {
-        const isMatch = await compareFacesLocal(profilePhotoPath, selfiePhotoPath);
+        const isMatch = await compareFacesAWS(profilePhotoPath, selfiePhotoPath);
         if (!isMatch) {
           return res.status(400).json(errorResponse("Face verification failed. Faces do not match."));
         }
