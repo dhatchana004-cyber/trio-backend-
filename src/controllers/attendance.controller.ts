@@ -133,17 +133,28 @@ export const clockOut = async (req: AuthRequest, res: Response) => {
        return res.status(400).json(errorResponse("Invalid profile photo format, unable to verify face."));
     }
 
+    let updatedNotes = activeAttendance.notes || "";
+    if (selfie_url) {
+      updatedNotes = `${updatedNotes ? updatedNotes + "\n" : ""}[CLOCK_OUT_SELFIE:${selfie_url}]`;
+    }
+    if (notes) {
+      updatedNotes = `${updatedNotes ? updatedNotes + "\n" : ""}${notes}`;
+    }
+
     const attendance = await prisma.attendance.update({
       where: { id: activeAttendance.id },
       data: {
         clock_out_at: new Date(),
         clock_out_lat: lat ? parseFloat(lat) : null,
         clock_out_lng: lng ? parseFloat(lng) : null,
-        notes: notes ? `${activeAttendance.notes ? activeAttendance.notes + "\\n" : ""}${notes}` : activeAttendance.notes,
+        notes: updatedNotes || null,
       },
     });
 
-    return res.status(200).json(successResponse(attendance));
+    return res.status(200).json(successResponse({
+      ...attendance,
+      selfie_out_url: selfie_url,
+    }));
   } catch (error: any) {
     return res.status(500).json(errorResponse(error.message));
   }
@@ -172,7 +183,15 @@ export const getAttendance = async (req: AuthRequest, res: Response) => {
       orderBy: { clock_in_at: "desc" }
     });
 
-    return res.status(200).json(successResponse(attendances));
+    const formattedAttendances = attendances.map((att: any) => {
+      const match = att.notes ? att.notes.match(/\[CLOCK_OUT_SELFIE:(.*?)\]/) : null;
+      return {
+        ...att,
+        selfie_out_url: match ? match[1] : null,
+      };
+    });
+
+    return res.status(200).json(successResponse(formattedAttendances));
   } catch (error: any) {
     return res.status(500).json(errorResponse(error.message));
   }
